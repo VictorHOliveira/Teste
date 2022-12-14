@@ -546,7 +546,7 @@ def no_filtering_import(xml_file, test_steps_filter, evidences_import, **kwargs)
     return test_execs
 
 
-def create_test_exec(data, cert):
+def create_test_exec(data):
     """
     Sends a request to import test execution via JIRA-XRAY API
 
@@ -557,11 +557,11 @@ def create_test_exec(data, cert):
     headers = {constants.CONTENT_TYPE: constants.CONTENT_TYPE_JSON}
     # Endpoit default
     url = urljoin(jira_address, endpoint)
-    response = requests.post(url, headers=headers, data=data, auth=(username, password), verify = cert)
+    response = requests.post(url, headers=headers, data=data, auth=(username, password), verify = False)
     return response
 
 
-def add_attachment_test_exec(test_exec_key, file, cert):
+def add_attachment_test_exec(test_exec_key, file):
     """
     Sends a request to add attachments to test execution
 
@@ -575,10 +575,10 @@ def add_attachment_test_exec(test_exec_key, file, cert):
     endpoint = constants.ATTACHMENT_ENDPOINT.format(test_exec_key)
     url = urljoin(jira_address, endpoint)
     headers = {constants.CONTENT_TYPE: attachment.content_type, constants.CONTENT_ATLASSIAN_TOKEN : constants.CONTENT_ATLASSIAN_TOKEN_VALUE}
-    response = requests.post(url, headers=headers, data=attachment.data, auth=(username, password), verify=cert)
+    response = requests.post(url, headers=headers, data=attachment.data, auth=(username, password), verify=False)
     return response
 
-def create_test_plan(data, cert):
+def create_test_plan(data):
     """
     Sends a request to create test plan via JIRA-XRAY API
 
@@ -589,11 +589,11 @@ def create_test_plan(data, cert):
     headers = {constants.CONTENT_TYPE: constants.CONTENT_TYPE_JSON}
     endpoint = constants.TEST_PLAN_ENDPOINT
     url = urljoin(jira_address, endpoint)
-    response = requests.post(url, headers=headers, data=data, auth=(username, password), verify = cert)
+    response = requests.post(url, headers=headers, data=data, auth=(username, password), verify = False)
     return response
 
 
-def add_test_exec_to_test_plan(data, test_plan_key, cert):
+def add_test_exec_to_test_plan(data, test_plan_key):
     """
     Sends a request to add a test execution to a given test plan via JIRA-XRAY API
 
@@ -606,11 +606,11 @@ def add_test_exec_to_test_plan(data, test_plan_key, cert):
     headers = {constants.CONTENT_TYPE: constants.CONTENT_TYPE_JSON}
     endpoint = constants.TEST_PLAN_TEST_EXECS_ENDPOINT.format(test_plan_key)
     url = urljoin(jira_address, endpoint)
-    response = requests.post(url, headers=headers, data=data, auth=(username, password), verify = cert)
+    response = requests.post(url, headers=headers, data=data, auth=(username, password), verify = False)
     return response
 
 
-def add_tests_to_test_plan(data, test_plan_key, cert):
+def add_tests_to_test_plan(data, test_plan_key):
     """
     Sends a request to add a list of tests to a given test plan via JIRA-XRAY API
 
@@ -623,7 +623,7 @@ def add_tests_to_test_plan(data, test_plan_key, cert):
     headers = {constants.CONTENT_TYPE: constants.CONTENT_TYPE_JSON}
     endpoint = constants.TEST_PLAN_TESTS_ENDPOINT.format(test_plan_key)
     url = urljoin(jira_address, endpoint)
-    response = requests.post(url, headers=headers, data=data, auth=(username, password), verify = cert)
+    response = requests.post(url, headers=headers, data=data, auth=(username, password), verify = False)
     return response
 
 
@@ -696,8 +696,8 @@ def parse_arguments():
     parser.add_argument(constants.TEST_EXEC_TESTENV, constants.TEST_EXEC_TESTENV_EXTENDED,
                         help=constants.TEST_EXEC_TESTENV_HELP)
     
-    parser.add_argument(constants.CERTIFICATE, constants.CERTIFICATE_EXTENDED,
-                        help=constants.CERTIFICATE_HELP)
+    #parser.add_argument(constants.CERTIFICATE, constants.CERTIFICATE_EXTENDED,
+    #                    help=constants.CERTIFICATE_HELP)
 
     # Add tool version option
     parser.add_argument(constants.TOOL_VERSION, constants.TOOL_VERSION_EXTENDED, action=constants.TOOL_VERSION_TAG,
@@ -772,7 +772,7 @@ if __name__ == '__main__':
     debug_mode = args.debug
 
     # path to certicate
-    certificate = args.certificate if args.certificate else False
+    #certificate = args.certificate if args.certificate else False
 
     # Test Execution Info
     test_exec_info_values = {}
@@ -826,7 +826,7 @@ if __name__ == '__main__':
 
     for key, test_exec in test_execs.items():
         json_data = json.dumps(todict(test_exec))
-        response = create_test_exec(json_data, certificate)
+        response = create_test_exec(json_data)
         if response:
             json_response = json.loads(response.text)
             if debug_mode:
@@ -855,7 +855,7 @@ if __name__ == '__main__':
 
     # Add attachements to test executions if were given as arguments.
     for filepath in list_arguments:
-        response = add_attachment_test_exec(test_exec_key, filepath, certificate)
+        response = add_attachment_test_exec(test_exec_key, filepath)
         file = os.path.basename(filepath) # get file name for better message
         if response:
             msg = file + " was added to test execution " + test_exec_key
@@ -879,7 +879,7 @@ if __name__ == '__main__':
         else:
             newTestPlan = TestPlan(project_key)
 
-        response = create_test_plan(newTestPlan.test_plan_json, certificate)
+        response = create_test_plan(newTestPlan.test_plan_json)
         test_plan_key = "Undefined"
         if response:
             json_response = json.loads(response.text)
@@ -896,7 +896,7 @@ if __name__ == '__main__':
 
         # Add test exec created to the test plan created
         newTestPlan.add_test_exec([test_exec_key])
-        response = add_test_exec_to_test_plan(newTestPlan.test_plan_add_test_exec_json, test_plan_key, certificate)
+        response = add_test_exec_to_test_plan(newTestPlan.test_plan_add_test_exec_json, test_plan_key)
         if response:
             # Prepare msg before print. Makes python2 more readable
             msg = "Test Exec " + test_exec_key + " was sucessfully linked to Test Plan " + test_plan_key
@@ -915,7 +915,7 @@ if __name__ == '__main__':
 
         # Add test cases, from xml of execution (e.g output.xml), to the test plan created
         newTestPlan.add_tests(list_test_cases)
-        response = add_tests_to_test_plan(newTestPlan.test_plan_add_tests_json, test_plan_key, certificate)
+        response = add_tests_to_test_plan(newTestPlan.test_plan_add_tests_json, test_plan_key)
         if response:
             # Prepare msg before print. Makes python2 more readable
             msg = "Tests " + str(list_test_cases) + " were sucessfully linked to Test Plan " + test_plan_key
